@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+<title>Title of the document</title>
+    <link rel="stylesheet" href="{% static 'myNewsApp/style.css' %}">
+</head>
+
+<body>
+  {% if user.is_authenticated %}
+<div class = "navBar">
+    <div class = "itemContainer">
+        <div>Hello {{user.first_name}}</div>
+        <div><a href = "source_listing">Sources</a></div>
+        <div><a href = "stories_listing">Stories</a></div>
+        <div><a href="logout">Logout</a></div>
+    </div>
+</div>
+  {% else %}
+  <div class = "navBar">
+    <div class = "itemContainer">
+        <div><a href = "register">SignUp</a></div>
+        <div><a href = "login">Login</a></div>
+    </div>
+</div>
+  {% endif %}
+  <div class="projectTitle">
+      <h3 >Welcome to News Monitoring System</h3>
+  </div>
+
+</body>
+
+</html>

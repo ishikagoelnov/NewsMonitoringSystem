@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Registration</title>
+    <link rel="stylesheet" href="{% static 'myNewsApp/style.css' %}">
+</head>
+<body>
+<div class = "navBar">
+    <div class = "itemContainer">
+        <div><a href = "/">Home</a></div>
+    </div>
+</div>
+<h2>Registration form</h2><br>
+   <form action="register" method="post">
+       {% csrf_token %}
+
+       Enter your first name : <input type="text" name="first_name" placeholder="First Name"><br>
+       Enter your last name  : <input type="text" name="last_name" placeholder="Last Name"><br>
+       Enter the username    : <input type="text" name="username" placeholder="Username"><br>
+       Enter your email      : <input type="email" name="email" placeholder="Email"><br>
+       Enter the password    : <input type="password" name="password1" placeholder="Password"><br>
+       Enter confirm password: <input type="password" name="password2" placeholder="Confirm Password"><br>
+
+         <div>
+     <label for="company">Choose company:</label><br>
+      <select name="company">
+          {% for company in allcompanies %}
+          <option value="{{company.company_name}}">{{company.company_name}}</option>
+          {% endfor %}
+      </select>
+  <br><br>
+         </div>
+         <div>
+     <label for="client">Choose client:</label><br>
+      <select name="client">
+          {% for client in allcompanies %}
+          <option value="{{client.company_name}}">{{client.company_name}}</option>
+          {% endfor %}
+      </select>
+  <br><br>
+         </div>
+       <input type="Submit">
+   </form>
+   <br>
+   <div class="alert" >
+       {% for message in messages %}
+       <span>{{message}}</span>
+       {% endfor %}
+   </div>
+</body>
+</html>

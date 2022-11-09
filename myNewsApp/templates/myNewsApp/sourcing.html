@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sourcing</title>
+    <link rel="stylesheet" href="{% static 'myNewsApp/style.css' %}">
+</head>
+<body>
+
+    <div class = "formDiv">
+    <h2>Add Source</h2>
+    <form action="sourcing" method="post">
+       {% csrf_token %}
+        <div>
+         <label>Enter the name of source  :</label><br>
+         <input type="text" name="sourceName" placeholder="Name" required><br>
+        </div>
+        <div>
+         <label>Enter the url of source   : </label><br>
+       <input type="url" name="sourceUrl" placeholder="URL" required><br>
+        </div>
+       <input class = "addBtn" type="Submit" value = "Add">
+    </form>
+    </div>
+</body>
+</html>

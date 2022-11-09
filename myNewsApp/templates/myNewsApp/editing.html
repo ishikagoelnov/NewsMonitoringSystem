@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Here</title>
+</head>
+<body>
+  <form action="" method="post">
+       {% csrf_token %}
+
+       Enter the name of source  : <input type="text"  value="{{source_data.name}}" name="updsourceName" ><<br>
+       Enter the url of source   : <input type="url" value="{{source_data.url}}" name="updsourceUrl" ><br>
+       <input type="Submit">
+   </form>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+      <link rel="stylesheet" href="{% static 'myNewsApp/style.css' %}">
+</head>
+<body>
+<div class = "navBar">
+    <div class = "itemContainer">
+        <div><a href = "/">Home</a></div>
+    </div>
+</div>
+  <h3>Login Form</h3>
+  <form action="login" method="POST">
+      {% csrf_token %}
+      Enter username : <input type="text" name="username" placeholder="Username"><br>
+      Enter password : <input type="password" name="password1" placeholder="Password"><br>
+      <input type="Submit">
+  </form>
+
+  <div class="alert" >
+       {% for message in messages %}
+       <span>{{message}}</span>
+       {% endfor %}
+   </div>
+</body>
+</html>

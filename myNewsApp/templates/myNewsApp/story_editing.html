@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Story Editing</title>
+</head>
+<body>
+   <div class = "addStoryForm">
+ <form action="" method="post">
+     {% csrf_token %}
+     <div>
+          <label>Enter the title : </label><br>
+     <input type="text" value="{{story_data.title}}" name="title" placeholder="Title"><br>
+         </div>
+
+     <div>
+         <label>Enter the published date : </label><br>
+     <input type="date" value="{{story_data.pub_date}}" name="pub_date" placeholder="Published Date"><br>
+         </div>
+     <div>
+     <label for="body_text">Enter the description:</label><br>
+     <textarea name="body_text"  rows="4" cols="50" placeholder="Enter the description here">{{story_data.body_text}}</textarea><br>
+     </div>
+     <div>
+         <label>Enter the url :</label><br>
+         <input type="url" name="url1" value="{{story_data.url}}" placeholder="URL"><br>
+         </div>
+
+     <input class = "addBtn" type="submit" value="Edit">
+
+ </form>
+    </div>
+</body>
+</html>

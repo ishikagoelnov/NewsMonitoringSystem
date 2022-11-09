@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Story</title>
+     <link rel="stylesheet" href="{% static 'myNewsApp/style.css' %}">
+</head>
+<body>
+
+<div class = "navBar">
+    <div class = "itemContainer">
+        <div><a href = "/">Home</a></div>
+        <div><a href = "stories_listing">Stories</a></div>
+    </div>
+</div>
+
+<div class = "addStoryForm">
+ <form action="addstory" method="post">
+     {% csrf_token %}
+     <div>
+          <label>Enter the title : </label><br>
+     <input type="text" name="title" placeholder="Title" required><br>
+         </div>
+     <div>
+     <label for="body_text">Select the source:</label><br>
+     <select name="source1">
+          {% for source in sources %}
+          <option value="{{source.name}}">{{source.name}}</option>
+          {% endfor %}
+      </select>
+     <br>
+     </div>
+
+     <div>
+         <label>Enter the published date : </label><br>
+     <input type="date" name="pub_date" placeholder="Published Date"><br>
+         </div>
+     <div>
+     <label for="body_text">Enter the description:</label><br>
+     <textarea name="body_text" rows="4" cols="50" placeholder="Enter the description here"></textarea><br>
+     </div>
+     <div>
+         <label>Enter the url :</label><br>
+         <input type="url" name="url1", placeholder="URL" required><br>
+         </div>
+
+     <div>
+     <label for="company">Choose companies:</label><br>
+      <select name="companies" multiple>
+          {% for company in allcompanies %}
+          <option value="{{company.company_name}}">{{company.company_name}}</option>
+          {% endfor %}
+      </select>
+  <br><br>
+         </div>
+     <input class = "addBtn" type="submit">
+
+ </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+.navBar{
+background-color: #e3e6c1;
+padding: 1%;
+}
+
+.itemContainer {
+display: flex;
+justify-content:start;
+column-gap: 30px;
+}
+
+.itemContainer a{
+    text-decoration: none;
+    color: black;
+}
+
+.formDiv {
+    margin-top: 1% !important;
+    border: 1px solid grey;
+    border-radius: 10px;
+    padding: 2%;
+    width: fit-content;
+    margin: auto;
+    text-align: center
+}
+
+.formDiv input{
+   padding: 3%;
+   font-size: 16px;
+}
+.formDiv label{
+   font-size: 16px;
+}
+
+.formDiv div{
+   margin-bottom: 10%;
+}
+
+.addBtn {
+padding: 5px 10px;
+background-color: grey;
+color: white;
+font-size: 20px;
+}
+
+.addStoryForm {
+    margin: 10px
+}
+
+.addStoryForm div{
+    margin-bottom: 16px;
+}
+
+.addStoryForm label{
+   font-size: 16px;
+}
+.addStoryForm input{
+   padding: 3px;
+   font-size: 16px;
+}
+
+.makeRight1 {
+    position: absolute;
+    right: 10px;
+}
+.makeRight2 {
+    position: absolute;
+    right: 80px;
+}
+
+.makeCenter {
+    text-align: center;
+}
+
+.makeCenter ul{
+    display: flex;
+    justify-content: space-around;
+}
+
+.makeCenter li{
+    list-style: none;
+    border-bottom: 1px solid grey;
+    border-radius: 5px;
+}
+
+marquee {
+width: 100%
+}
+
+.makeCenter a {
+    text-decoration: none;
+}
+
+.projectTitle h3{
+   font-size: 40px;
+   text-align:center
+}
