@@ -16,15 +16,15 @@ class Company(models.Model):
 
 class Subscriber(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    company_data = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, related_name='companyInfo')
-    client = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='clientInfo')
+    company_data = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, related_name='companyInfo')  # company delete subscriber delete
+    client = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='clientInfo')   # client delete subscriber delte
 
 
 class Source(models.Model):
     name = models.CharField(max_length=200)
     url = models.URLField(max_length=200)
-    subscribed_user = models.ForeignKey(Subscriber, on_delete=models.CASCADE)
-    sourced_client = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
+    subscribed_user = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name='subUser')  # user delete - source delete
+    sourced_client = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='sourcingClient')  # remive null=true, but if we remove the clinet then source woukd be delete or not
     # referred_company = models.ManyToManyField(Company, related_name='refd_comp')
 
     class Meta:
@@ -36,12 +36,12 @@ class Source(models.Model):
 
 class Story(models.Model):
     title = models.CharField(max_length=200)
-    source = models.ForeignKey(Source, on_delete=models.CASCADE)
+    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name='sourcedStory') # to be chnaged to set null
     pub_date = models.DateField()
     body_text = models.TextField()
     url = models.URLField(max_length=250)
-    tagged_client = models.ForeignKey(Company, on_delete=models.CASCADE, null=True)
-    tagged_company = models.ManyToManyField(Company, related_name='tag_comp')
+    tagged_client = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='tagClient') # to be reviewed (what happened if we remove the clieenet)
+    tagged_company = models.ManyToManyField(Company, related_name='tagCompany')
     # login_user = models.ForeignKey(Subscriber, on_delete=models.CASCADE)
 
     class Meta:

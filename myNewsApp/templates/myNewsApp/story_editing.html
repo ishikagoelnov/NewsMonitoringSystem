@@ -15,7 +15,7 @@
 
      <div>
          <label>Enter the published date : </label><br>
-     <input type="date" value="{{story_data.pub_date}}" name="pub_date" placeholder="Published Date"><br>
+     <input type="date" value="{{story_data.pub_date}}" name="pub_date" placeholder="Published Date" id="datePicker"><br>
          </div>
      <div>
      <label for="body_text">Enter the description:</label><br>
@@ -26,9 +26,12 @@
          <input type="url" name="url1" value="{{story_data.url}}" placeholder="URL"><br>
          </div>
 
-     <input class = "addBtn" type="submit" value="Edit">
+     <input class = "addBtn" type="submit" value="Edit" >
 
  </form>
+       <script>
+           document.getElementById('datePicker').valueAsDate = new Date();
+       </script>
     </div>
 </body>
 </html>

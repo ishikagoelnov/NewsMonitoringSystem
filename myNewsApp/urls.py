@@ -18,5 +18,7 @@ urlpatterns = [
     path('addstory', views.addstory, name='addstory'),
     path('storyDelete/<int:pk>', views.storyDelete, name='storyDelete'),
     path('editStories/<int:pk>', views.editStories, name="editStories"),
-    path('search_story', views.search_story, name='search_story')
+    path('search_story', views.search_story, name='search_story'),
+    path('forget_password', views.forget_password, name='forget_password'),
+    path('fetching/<int:pk>', views.fetching, name='fetching')
 ]
