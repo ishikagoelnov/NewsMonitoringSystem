@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.db.models import Prefetch
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User, auth
@@ -7,8 +7,9 @@ from django.views.decorators.csrf import csrf_exempt
 import feedparser
 from django.db import IntegrityError
 from dateutil.parser import parse
-# from xml.etree import ElementTree as ET
 from django.core.paginator import Paginator
+from django.db.models import Q
+from myNewsApp.utils import story_view,story_fetching,check_rss
 
 
 def index(request):
@@ -22,19 +23,30 @@ def logout(request):
 
 @csrf_exempt
 def login(request):
+    """
+    In this method we are trying to log in already created user
+    using the username and password asked from user model of django
+    """
+
     if request.method == 'POST':
         username = request.POST['username']
-        password1 = request.POST['password1']
+        password = request.POST['password1']
 
-        # fetch the user with this credentials
-        user = auth.authenticate(username=username, password=password1)
+        user = auth.authenticate(username=username, password=password)
         if user is not None:
-            auth.login(request, user)
-            sb = Subscriber.objects.get(user=user.id)
-            if Source.objects.filter(subscribed_user=sb).exists():
-                return redirect('/stories_listing')
-            else:
-                return render(request, 'myNewsApp/sourcing.html')  # redirect to story page
+            try:
+                auth.login(request, user)
+                messages.info(request, "Logged in successfully!!")
+                source=Source.objects.filter(
+                    subscribed_user__user=user.id
+                )
+                if source:
+                    return redirect('/stories_listing')
+                else:
+                    return render(request, 'myNewsApp/sourcing.html')  # redirect to story page
+            except IndexError as e:
+                messages.info(request, 'User not correctly signup!!')
+                return redirect('/login')
 
         else:
             messages.info(request, 'Invalid Credentials')
@@ -54,6 +66,7 @@ def forget_password(request):
             u = User.objects.get(username=username)
             u.set_password(newPassword)
             u.save()
+            messages.info(request,"Password reset successfully")
             return render(request, 'myNewsApp/login.html')
         else:
             messages.info(request, "Password and Confirm password are not same")
@@ -63,50 +76,46 @@ def forget_password(request):
 
 
 def register(request):
+    all_companies = Company.objects.all()
     if request.method == 'POST':
+        # fetch all data from the form
         first_name = request.POST['first_name']
         last_name = request.POST['last_name']
         username = request.POST['username']
         password1 = request.POST['password1']
         password2 = request.POST['password2']
         email = request.POST['email']
-        company1 = request.POST.getlist('company')
-        client1 = request.POST.getlist('client')
+        company_data = request.POST.getlist('company')
+        client_data = request.POST.getlist('client')
 
         if password1 == password2:
-            if User.objects.filter(username=username).exists():
-                messages.info(request, 'Username Already Taken')
-                return redirect('/register')
-            elif User.objects.filter(email=email).exists():
-                messages.info(request, 'Account with this email already exists')
+
+            if User.objects.filter(Q(username=username) | Q(email=email)).exists():
+                messages.info(request, 'User already exists')
                 return redirect('/register')
             else:
-                cl = client1[0]
-                comp = company1[0]
-                company_reg = Company.objects.get(company_name=comp)
-                client_reg = Company.objects.get(company_name=cl)
+                client, company = client_data[0], company_data[0]  # get data from list of dropdown
+                queryset =all_companies.filter(Q(company_name=company) | Q(company_name=client))  # get company and client in the form of list
+                if(client==company):
+                    registered_client=registered_company=queryset[0]
+                else:
+                    registered_company=queryset[0]
+                    registered_client=queryset[1]
+
                 user = User.objects.create_user(first_name=first_name, last_name=last_name, username=username,
                                                 password=password1, email=email)
                 user.save()
 
-                subscribedUser = Subscriber.objects.create(user=user, company_data=company_reg, client=client_reg)
-                subscribedUser.save()
+                Subscriber.objects.create(user=user, company_data=registered_company, client=registered_client).save()
+                messages.info(request,"Success!! registered successfully")
                 return redirect('/login')
         else:
             print("Check your passwords !! Confirm password not matching to password")
             messages.info(request, 'Check your passwords !! Confirm password not matching to password')
             return redirect('/register')
     else:
-        companyAll = Company.objects.all()
-        return render(request, 'myNewsApp/register.html', {'allcompanies': companyAll})
+        return render(request, 'myNewsApp/register.html', {'allcompanies': all_companies})
 
-
-def check_rss(url):
-    url_split = url.split('.')
-    for i in url_split:
-        if i == 'xml' or i == 'cms':
-            return True
-    return False
 
 
 def sourcing(request):
@@ -114,13 +123,19 @@ def sourcing(request):
         sourceName = request.POST['sourceName']
         sourceUrl = request.POST['sourceUrl']
         if check_rss(sourceUrl):
-            user_here = request.user.id
-            sb = Subscriber.objects.get(user=user_here)
-            cl = sb.client
-            sourcing_obj = Source.objects.create(name=sourceName, url=sourceUrl, subscribed_user=sb, sourced_client=cl)
-            sourcing_obj.save()
-            print(sourcing_obj)
-            return redirect('/stories_listing')
+            try:
+                subscriber_user = Subscriber.objects.select_related('client').filter(user=request.user.id)[0]
+                requested_client = subscriber_user.client
+                Source.objects.create(name=sourceName, url=sourceUrl, subscribed_user=subscriber_user,
+                                      sourced_client=requested_client).save()
+                messages.info(request,"Source added successfully")
+                return redirect('/stories_listing')
+            except IndexError:
+                messages.info(request,'Something wrong with user account!! try with valid account')
+                return redirect('/logout')
+            except IntegrityError:
+                messages.info(request, 'This source already exists try another one!!')
+                return redirect('/sourcing')
         else:
             messages.info(request, 'Invalid rss feed !! Try to add correct rss ')
             return redirect('/sourcing')
@@ -130,89 +145,79 @@ def sourcing(request):
 
 
 def source_listing(request):
-    user = request.user.id
     if request.user.is_staff:
         source = Source.objects.all()
     else:
-        sb = Subscriber.objects.get(user=user)
-        source = Source.objects.filter(subscribed_user=sb)
-    source_count = source.count()
+        source=Source.objects.select_related('subscribed_user').filter(subscribed_user__user=request.user.id)
 
-    if source_count == 0:
+    if not source:
         return render(request, 'myNewsApp/sourcing.html')
     else:
         listing = {
             'source_lists': source,
-            'source_count': source_count
+            'source_count': len(source)
         }
         return render(request, 'myNewsApp/source_listing.html', listing)
 
 
-def story_view(user_id=None, is_staff=False):
-    if is_staff:
-        stories = Story.objects.all()
-    else:
-        sb = Subscriber.objects.get(user=user_id)
-        preferred_client = sb.client
-        stories = Story.objects.filter(tagged_client=preferred_client)
-
-    storyCount = stories.count()
-    context = {
-        'stories': stories,
-        'storyCount': storyCount
-    }
-    return context
-
-
 def editing(request, pk):
+    source_data = Source.objects.get(id=pk)
     if request.method == 'POST':
-        updsourceName = request.POST['updsourceName']
-        updsourceUrl = request.POST['updsourceUrl']
-        ourSource = Source.objects.get(id=pk)
-        ourSource.name = updsourceName
-        ourSource.url = updsourceUrl
-        ourSource.save()
-        return redirect('/source_listing')
+        updated_sourceName = request.POST['updsourceName']
+        updated_sourceUrl = request.POST['updsourceUrl']
+
+        if check_rss(updsourceUrl):
+            source_data.name = updated_sourceName
+            source_data.url = updated_sourceUrl
+            source_data.save()
+            messages.info(request,"Source edited successfully!!")
+            return redirect('/source_listing')
+        else:
+            messages.info(request, 'Invalid rss feed !! Try to add correct rss ')
+            return render(request, 'myNewsApp/editing.html', {'source_data': source_data})
 
     else:
-        source_data = Source.objects.get(id=pk)
         return render(request, 'myNewsApp/editing.html', {'source_data': source_data})
 
 
 def sourceDelete(request, pk):
+    if not request.user.is_staff:
+        source=Source.objects.select_related('subscribed_user').filter(Q(subscribed_user__user=request.user.id),Q(id=pk))[0]
+    else:
+        source = Source.objects.select_related('subscribed_user').get(id=pk)
+
     if request.method == 'POST':
-        source_data = Source.objects.get(id=pk)
-        source_data.delete()  # raises integrity error
-        user = request.user.id
-        sb = Subscriber.objects.get(user=user)
-        source_count = Source.objects.filter(subscribed_user=sb).count()
-        if source_count == 0:
+        source.delete()
+        messages.info(request,"Source deleted successfully")
+        if not source:
             return redirect('/sourcing')
         else:
             return redirect('/source_listing')
     else:
-        source_data = Source.objects.get(id=pk)
-        return render(request, 'myNewsApp/sourceDelete.html', {'source_data': source_data})
+        messages.info(request,'Warning!! If source deleted then its stories will also be deleted ')
+        return render(request, 'myNewsApp/sourceDelete.html', {'source_data': source})
 
 
 def search_source(request):
-    name1 = request.GET.get('search_name')
-    user = request.user.id
+    name = request.GET.get('search_name')
     if request.user.is_staff:
-        s1 = Source.objects.filter(name__icontains=name1)
+        source = Source.objects.filter(name__icontains=name)
     else:
-        sb = Subscriber.objects.get(user=user)
-        s1 = Source.objects.filter(name__icontains=name1, subscribed_user=sb)
-    source_count = s1.count()
+        source = Source.objects.filter(name__icontains=name, subscribed_user__user=request.user.id)
     listing = {
-        'source_lists': s1,
-        'source_count': source_count
+        'source_lists': source,
+        'source_count': len(source),
+        'search_name':name
     }
+
     return render(request, 'myNewsApp/source_listing.html', listing)
 
 
 def addstory(request):
+    companies=Company.objects.all()
+    sources=Source.objects.select_related('subscribed_user')
     if request.method == 'POST':
+
         title = request.POST['title']
         source1 = request.POST['source1']
         pub_date = request.POST['pub_date']
@@ -220,171 +225,112 @@ def addstory(request):
         url1 = request.POST['url1']
         companies = request.POST.getlist('companies')
 
-        user = request.user.id
-        sb = Subscriber.objects.get(user=user)
-        preferred_source = Source.objects.get(name=source1)
-        preferred_client = sb.client
-        newStory = Story.objects.create(title=title, source=preferred_source, pub_date=pub_date, body_text=body_text,
-                                        url=url1,
-                                        tagged_client=preferred_client)
-        newStory.save()
-        for company in companies:
-            print(company)
-            c1 = Company.objects.get(company_name=company)
-            newStory.tagged_company.add(c1)
-        return redirect('/stories_listing')
+        preferred_source = sources.filter(name=source1)[0]
+        preferred_client=Subscriber.objects.select_related('client').filter(user=request.user.id)[0].client
+        if Story.objects.filter(url=url1).exists():
+            messages.info(request,"This story already exists")
+            return redirect('/addstory')
+        else:
+            newStory = Story.objects.create(title=title, source=preferred_source, pub_date=pub_date,
+                                            body_text=body_text,
+                                            url=url1,
+                                            tagged_client=preferred_client)
+            newStory.save()
+            for company in companies:
+                c1 = Company.objects.get(company_name=company)
+                newStory.tagged_company.add(c1)
+            messages.info(request,"Story added successfully")
+            return redirect('/stories_listing')
     else:
-        company1 = Company.objects.all()
-        user = request.user.id
-        sb = Subscriber.objects.get(user=user)
-        sources = Source.objects.filter(subscribed_user=sb)
+        if not request.user.is_staff:
+            sources = sources.filter(subscribed_user__user=request.user.id)
+
         context = {
-            'allcompanies': company1,
+            'allcompanies': companies,
             'sources': sources
         }
         return render(request, 'myNewsApp/addstory.html', context)
 
 
-def storyDelete(request, pk):
+def storyDelete(request,pk):
     storyHere = Story.objects.get(id=pk)
     storyHere.delete()
+    messages.info(request, "Story deleted successfully")
     return redirect('/stories_listing')
 
 
 def editStories(request, pk):
+    our_story = Story.objects.filter(id=pk)[0]
     if request.method == 'POST':
-        uptitle = request.POST['title']
-        uppub_date = request.POST['pub_date']
-        upbody_text = request.POST['body_text']
-        upurl1 = request.POST['url1']
+        updated_title = request.POST['title']
+        updated_pub_date = request.POST['pub_date']
+        updated_body_text = request.POST['body_text']
+        updated_url = request.POST['url1']
 
-        ourStory = Story.objects.get(id=pk)
-        ourStory.title = uptitle
-        uppub_date1 = parse(uppub_date)
-        ourStory.pub_date = uppub_date1
-        ourStory.body_text = upbody_text
-        ourStory.url = upurl1
-        ourStory.save()
-
-        is_staff = request.user.is_staff
-        user = request.user.id
-        context = story_view(user, is_staff)  # send user id and is_staff and return all the contt i.e info dto displat
+        our_story.title = updated_title
+        our_story.pub_date = parse(updated_pub_date)
+        our_story.body_text = updated_body_text
+        our_story.url = updated_url
+        our_story.save()
+        messages.info(request,"Story edited successfully")
         return redirect('/stories_listing')
     else:
-        story_data = Story.objects.get(id=pk)
-        return render(request, 'myNewsApp/story_editing.html', {'story_data': story_data})
+        return render(request, 'myNewsApp/story_editing.html', {'story_data': our_story})
 
 
 def search_story(request):
-    name1 = request.GET.get('search_name')
-    user = request.user.id
+    name = request.GET.get('search_name')
     if request.user.is_staff:
-        s1 = Story.objects.filter(title__icontains=name1)
+        stories = Story.objects.select_related('source','tagged_client').prefetch_related('tagged_company').filter(title__icontains=name)
     else:
-        sb = Subscriber.objects.get(user=user)
-        client = sb.client
-        s1 = Story.objects.filter(title__icontains=name1, tagged_client=client)
-    story_count = s1.count()
-    listing = {
-        'stories': s1,
-        'storyCount': story_count
+        client=Subscriber.objects.select_related('client').filter(user=request.user.id)[0].client
+        stories = Story.objects.select_related('source','tagged_client').prefetch_related('tagged_company').filter(title__icontains=name, tagged_client=client)
+
+    context = {
+        'stories': stories,
+        'storyCount': len(stories),
+        'search_name': name
     }
-    return render(request, 'myNewsApp/stories_listing.html', listing)
+    return render(request, 'myNewsApp/stories_listing.html', context)
+
 
 
 def fetching(request, pk):
-    source_id = Source.objects.get(id=pk)
-    source_url = source_id.url
-    news_fetching = feedparser.parse(source_url)
-    allEntries1 = news_fetching.entries
-    for entry in allEntries1:
-        title = entry.title
-        desc = entry.summary
-        updesc = ""  # here updated description
-        if '<' in desc:
-            ed = desc.rfind('>')
-            updesc += desc[ed + 1:]
-        else:
-            updesc += desc
-        sourceHere = Source.objects.get(url=source_url)
-        pub_date1 = entry.published
-        pub_date = parse(pub_date1)
-        url = entry.link
-        clientHere = sourceHere.sourced_client
-        userHere = sourceHere.subscribed_user
-        companyHere = userHere.company_data
-        if Story.objects.filter(url=url).exists():
-            pass
-        else:
-            try:
-                story_obj = Story.objects.create(title=title, source=sourceHere, pub_date=pub_date,
-                                                 body_text=updesc,
-                                                 url=url, tagged_client=clientHere)
-                story_obj.save()
-                story_obj.tagged_company.add(companyHere)
+    source = Source.objects.select_related('sourced_client','subscribed_user').get(id=pk)
+    subscriber = Subscriber.objects.select_related('client','company_data').get(user=request.user.id)
+    if request.user.is_staff:
+        stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
+    else:
+        stories = Story.objects.filter(tagged_client=subscriber.client).select_related('source','tagged_client').prefetch_related('tagged_company')
 
-            except IntegrityError as e:
-                continue
-
+    story_fetching(source,subscriber,stories)
+    messages.info(request,"Source fetched successfully")
     return redirect('/stories_listing')
 
 
 def stories_listing(request):
     is_staff = request.user.is_staff
-    user_id = request.user.id
+    subscriber=Subscriber.objects.select_related('client','company_data').filter(user=request.user.id)[0]
+    subcribed_client = subscriber.client
     if is_staff:
-        stories = Story.objects.all()
-    else:
-        sb = Subscriber.objects.get(user=user_id)
-        preferred_client = sb.client
-        stories = Story.objects.filter(tagged_client=preferred_client)
+        stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
 
-    storyCount = stories.count()
-    if storyCount == 0:
-        sb = Subscriber.objects.get(user=user_id)
-        clientHere = sb.client
-        preferred_sources = Source.objects.filter(sourced_client=clientHere)
-        count = preferred_sources.count()
-        if count == 0:
+    else:
+        stories = Story.objects.filter(tagged_client=subcribed_client).select_related('source','tagged_client').prefetch_related('tagged_company')
+
+    if not stories:
+        preferred_sources = Source.objects.filter(sourced_client=subcribed_client).select_related('sourced_client','subscribed_user')
+        if not preferred_sources:
             return redirect('/sourcing')
         else:
-            storyCount = 0
-            for i in range(count):
-                source_url = preferred_sources[i].url
-                NewsFeed = feedparser.parse(source_url)
-                allEntries1 = NewsFeed.entries
-                for entry in allEntries1:
-                    storyCount += 1
-                    title = entry.title
-                    desc = entry.summary
-                    updesc = ""  # here updated description
-                    if '<' in desc:
-                        ed = desc.rfind('>')
-                        updesc += desc[ed + 1:]
-                    else:
-                        updesc += desc
-                    sourceHere = Source.objects.get(url=source_url)
-                    pub_date1 = entry.published
-                    pub_date = parse(pub_date1)
-                    url = entry.link
-                    clientHere = sourceHere.sourced_client
-                    userHere = sourceHere.subscribed_user
-                    companyHere = userHere.company_data
-                    if Story.objects.filter(url=url).exists():
-                        pass
-                    else:
-                        try:
-                            story_obj = Story.objects.create(title=title, source=sourceHere, pub_date=pub_date,
-                                                             body_text=updesc,
-                                                             url=url, tagged_client=clientHere)
-                            story_obj.save()
-                            story_obj.tagged_company.add(companyHere)
+            messages.info(request,"Fetch some source for stories")
+            return redirect('/source_listing')
 
-                        except IntegrityError as e:
-                            continue
-    else:
-        pass
-    context = story_view(user_id, is_staff)
+    context = {
+        'stories': stories,
+        'storyCount': len(stories)
+    }
+    # pagination
     p = Paginator(context['stories'], 5)
     page_number = request.GET.get('page')
     page_to_show = p.get_page(page_number)

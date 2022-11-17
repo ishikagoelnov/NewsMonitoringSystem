@@ -81,6 +81,11 @@
 
  </form>
     </div>
+ <div class="alert" >
+       {% for message in messages %}
+       <span>{{message}}</span>
+       {% endfor %}
+   </div>
 <script>
     document.getElementById('datePicker').valueAsDate=new Date()
 </script>

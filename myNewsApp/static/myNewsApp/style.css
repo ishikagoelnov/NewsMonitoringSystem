@@ -2,6 +2,7 @@
 position:fixed
 background-color: #e3e6c1;
 padding: 1%;
+
 }
 
 .itemContainer {
@@ -98,4 +99,35 @@ width: 100%
 }
 .makeRight3{
  right:40px
+}
+
+.loginForm{
+    width:100px !important;
+}
+
+.alertMessage {
+  padding: 20px;
+  background-color: #ecaf55
+  color: white;
+  margin-bottom: 15px;
+}
+
+/* The close button */
+.closebtnMessage {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+/* When moving the mouse over the close button */
+.closebtnMessage:hover {
+  color: black;
+}
+.alert.warning {
+background-color: #ff9800;
 }
