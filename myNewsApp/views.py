@@ -10,7 +10,9 @@ from dateutil.parser import parse
 from django.core.paginator import Paginator
 from django.db.models import Q
 from myNewsApp.utils import story_view,story_fetching,check_rss
-
+from myNewsApp.serializers import Story_listing_Serializer, CompanySerializer
+from rest_framework.decorators import api_view
+from django.http import HttpResponse, JsonResponse
 
 def index(request):
     return render(request, 'myNewsApp/index.html')
@@ -307,7 +309,7 @@ def fetching(request, pk):
     messages.info(request,"Source fetched successfully")
     return redirect('/stories_listing')
 
-
+@api_view(['GET'])
 def stories_listing(request):
     is_staff = request.user.is_staff
     subscriber=Subscriber.objects.select_related('client','company_data').filter(user=request.user.id)[0]
@@ -325,14 +327,17 @@ def stories_listing(request):
         else:
             messages.info(request,"Fetch some source for stories")
             return redirect('/source_listing')
-
+    # change applied here for api
+    serialized_stories = Story_listing_Serializer(stories, many=True)
     context = {
-        'stories': stories,
+        'stories': serialized_stories.data,
         'storyCount': len(stories)
     }
+    # print(JsonResponse(serialized_stories.data,safe=False))
     # pagination
     p = Paginator(context['stories'], 5)
     page_number = request.GET.get('page')
     page_to_show = p.get_page(page_number)
     context['stories'] = page_to_show
-    return render(request, 'myNewsApp/stories_listing.html', context)
+    return JsonResponse(serialized_stories.data, safe=False)
+    # return render(request, 'myNewsApp/stories_listing.html', context)
