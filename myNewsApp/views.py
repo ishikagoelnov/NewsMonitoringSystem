@@ -309,7 +309,19 @@ def fetching(request, pk):
     messages.info(request,"Source fetched successfully")
     return redirect('/stories_listing')
 
+
 @api_view(['GET'])
+def stories_listing_api(request):
+    is_staff = request.user.is_staff
+    if is_staff:
+        stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
+    else:
+        stories = Story.objects.filter(tagged_client=subcribed_client).select_related('source','tagged_client').prefetch_related('tagged_company')
+
+    serialized_stories = Story_listing_Serializer(stories, many=True)
+    return JsonResponse(serialized_stories.data, safe=False)
+
+
 def stories_listing(request):
     is_staff = request.user.is_staff
     subscriber=Subscriber.objects.select_related('client','company_data').filter(user=request.user.id)[0]
@@ -327,17 +339,15 @@ def stories_listing(request):
         else:
             messages.info(request,"Fetch some source for stories")
             return redirect('/source_listing')
-    # change applied here for api
-    serialized_stories = Story_listing_Serializer(stories, many=True)
+
     context = {
-        'stories': serialized_stories.data,
+        'stories': stories,
         'storyCount': len(stories)
     }
-    # print(JsonResponse(serialized_stories.data,safe=False))
+    # stories_listing_api(stories)
     # pagination
     p = Paginator(context['stories'], 5)
     page_number = request.GET.get('page')
     page_to_show = p.get_page(page_number)
     context['stories'] = page_to_show
-    return JsonResponse(serialized_stories.data, safe=False)
-    # return render(request, 'myNewsApp/stories_listing.html', context)
+    return render(request, 'myNewsApp/stories_listing.html', context)
