@@ -33,15 +33,19 @@ def story_fetching(source, subscriber, stories):
         description = entry.summary
         updated_description = update_summary(description)
         # parsing the published date to mm-dd-yy format
-        pub_date = parse(entry.published)
+        entry1 = entry.published
+        pub_date = parse(entry1)
         url = entry.link
         clientHere = source.sourced_client
         companyHere = subscriber.company_data  # company data
         if not stories.filter(url=url).exists():
             try:
-                story_obj = Story.objects.create(title=title, source=source, pub_date=pub_date,
+                story_obj = Story.objects.create(title=title,
+                                                 source=source,
+                                                 pub_date=pub_date,
                                                  body_text=updated_description,
-                                                 url=url, tagged_client=clientHere)
+                                                 url=url,
+                                                 tagged_client=clientHere)
                 story_obj.save()
                 story_obj.tagged_company.add(companyHere)
             except IntegrityError as e:

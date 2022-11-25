@@ -313,10 +313,13 @@ def fetching(request, pk):
 @api_view(['GET'])
 def stories_listing_api(request):
     is_staff = request.user.is_staff
-    if is_staff:
-        stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
-    else:
-        stories = Story.objects.filter(tagged_client=subcribed_client).select_related('source','tagged_client').prefetch_related('tagged_company')
+    stories = Story.objects.select_related('tagged_client',
+                                           'source').prefetch_related(
+        'tagged_company')
+    # if is_staff:
+    #     stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
+    # else:
+    #     stories = Story.objects.filter(tagged_client=subcribed_client).select_related('source','tagged_client').prefetch_related('tagged_company')
 
     serialized_stories = Story_listing_Serializer(stories, many=True)
     return JsonResponse(serialized_stories.data, safe=False)
@@ -344,7 +347,6 @@ def stories_listing(request):
         'stories': stories,
         'storyCount': len(stories)
     }
-    # stories_listing_api(stories)
     # pagination
     p = Paginator(context['stories'], 5)
     page_number = request.GET.get('page')
