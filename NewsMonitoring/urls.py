@@ -16,13 +16,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from rest_framework import routers
+from myNewsApp.api import StoryList, StoryDetail
 
 urlpatterns = [
     path('', include('myNewsApp.urls')),
     path('__debug__/', include('debug_toolbar.urls')),
     path('admin/', admin.site.urls),
+    path('api/stories_list/', StoryList.as_view(), name='stories_list'),
+    path('api/stories_list/<int:pk>', StoryDetail.as_view(), name='story_detail'),
+    path('api-auth', include('rest_framework.urls',
+                             namespace='rest_framework'))
 ]
 
 # if settings.DEBUG:
 #     urlpatterns += path('__debug__/', include('debug_toolbar.urls'))
-

@@ -310,24 +310,6 @@ def fetching(request, pk):
     return redirect('/stories_listing')
 
 
-@api_view(['GET'])
-def stories_listing_api(request):
-    is_staff = request.user.is_staff
-    subscriber = Subscriber.objects.select_related('client', 'company_data').get(
-        user=request.user.id)
-    subcribed_client = subscriber.client
-    # stories = Story.objects.select_related('tagged_client',
-    #                                        'source').prefetch_related(
-    #     'tagged_company')
-    if is_staff:
-        stories = Story.objects.select_related('tagged_client','source').prefetch_related('tagged_company')
-    else:
-        stories = Story.objects.filter(tagged_client=subcribed_client).select_related('source','tagged_client').prefetch_related('tagged_company')
-
-    serialized_stories = Story_listing_Serializer(stories, many=True)
-    return JsonResponse(serialized_stories.data, safe=False)
-
-
 def stories_listing(request):
     is_staff = request.user.is_staff
     subscriber=Subscriber.objects.select_related('client','company_data').get(user=request.user.id)

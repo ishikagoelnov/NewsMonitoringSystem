@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'myNewsApp',
     'debug_toolbar',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders'
 
 ]
@@ -92,28 +93,6 @@ DATABASES = {
     }
 }
 
-LOGGING = {
-    'version': 1,
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-        }
-    },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-        }
-    }
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
@@ -159,6 +138,8 @@ CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:4200', # Allowed host, if CORS_ORIGIN_ALLOW_ALL is False
 )
+
+CORS_ALLOW_CREDENTIALS = True   # to send cookies to the frontent framework
 # STATIC_URL = 'static/'
 
 # db_from_env = dj_database_url.config()
@@ -175,3 +156,15 @@ STATICFILES_DIRS = (
 )
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication'
+    )
+
+}
