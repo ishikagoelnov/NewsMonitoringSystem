@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import *
 from django.http import Http404
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import AllowAny
+# from .serializers import RegisterSerializer
+from rest_framework import generics
 
 
 class StoryList(APIView):
@@ -91,3 +95,26 @@ class StoryDetail(APIView):
         story.delete()
         return Response(status=
                         status.HTTP_204_NO_CONTENT)
+
+
+class MyObtainTokenPairView(TokenObtainPairView):
+    permissions_classes = (AllowAny,)
+    serializer_class = MyTokenObtainPairSerializer
+
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    #
+    # def get(self, request):
+    #     serializer = RegisterSerializer(self.queryset, many=True)
+    #     return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        serializer = SubscriberSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,
+                            status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST)
