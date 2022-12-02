@@ -10,7 +10,7 @@ from dateutil.parser import parse
 from django.core.paginator import Paginator
 from django.db.models import Q
 from myNewsApp.utils import story_view,story_fetching,check_rss
-from myNewsApp.serializers import Story_listing_Serializer, CompanySerializer
+# from myNewsApp.serializers import Story_listing_Serializer, CompanySerializer
 from rest_framework.decorators import api_view
 from django.http import HttpResponse, JsonResponse
 
@@ -43,12 +43,12 @@ def login(request):
                     subscribed_user__user=user.id
                 )
                 if source:
-                    return redirect('/stories_listing')
+                    return redirect('/home')
                 else:
                     return render(request, 'myNewsApp/sourcing.html')  # redirect to story page
             except IndexError as e:
                 messages.info(request, 'User not correctly signup!!')
-                return redirect('/login')
+                return redirect('/')
 
         else:
             messages.info(request, 'Invalid Credentials')

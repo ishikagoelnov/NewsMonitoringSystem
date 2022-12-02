@@ -1,23 +1,16 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from .serializers import *
-from django.http import Http404
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.permissions import AllowAny
-# from .serializers import RegisterSerializer
-from rest_framework import generics
+from django.http import JsonResponse
+from myNewsApp.models import *
+from django.views.decorators.csrf import csrf_exempt
 
 
-class StoryList(APIView):
-    def get(self, request):
+def StoryList(request):
+    if request.method == 'GET':
         is_staff = request.user.is_staff
         subscriber = Subscriber.objects.select_related('client',
                                                        'company_data').get(
             user=request.user.id)
-        subcribed_client = subscriber.client
-        print(request.user.id)
-        print(subcribed_client)
+        subscribed_client = subscriber.client
         if is_staff:
             stories = Story.objects.select_related('tagged_client',
                                                    'source').prefetch_related(
@@ -25,96 +18,59 @@ class StoryList(APIView):
 
         else:
             stories = Story.objects.filter(
-                tagged_client=subcribed_client).select_related('source',
+                tagged_client=subscribed_client).select_related('source',
                                                                'tagged_client').prefetch_related(
                 'tagged_company')
 
         serialized_stories = Story_listing_Serializer(stories,
                                                       many=True)
-        return Response(serialized_stories.data)
+        return JsonResponse(serialized_stories.data, safe=False, status=200)
 
-    def post(self, request):
+    if request.method == 'POST':
         serializer = Story_listing_Serializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data,
-                            status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(serializer.data, safe=False, status=201)
+        return JsonResponse(serializer.errors, safe=False, status=400)
 
 
-class StoryDetail(APIView):
+@csrf_exempt
+def StoryDetail(request, pk):
+    try:
+        is_staff = request.user.is_staff
+        subscriber = Subscriber.objects.select_related('client',
+                                                       'company_data').get(
+            user=request.user.id)
+        subscribed_client = subscriber.client
+        if is_staff:
+            story = Story.objects.select_related('tagged_client',
+                                                 'source').prefetch_related(
+                'tagged_company').get(id=pk)
 
-    def get_object(self, request, pk):
-        try:
-            is_staff = request.user.is_staff
-            subscriber = Subscriber.objects.select_related('client',
-                                                           'company_data').get(
-                user=request.user.id)
-            subcribed_client = subscriber.client
-            if is_staff:
-                story = Story.objects.select_related('tagged_client',
-                                                     'source').prefetch_related(
-                    'tagged_company').get(id=pk)
+        else:
+            story = Story.objects.filter(
+                tagged_client=subscribed_client).select_related(
+                'source',
+                'tagged_client').prefetch_related(
+                'tagged_company').get(id=pk)
 
-            else:
-                story = Story.objects.filter(
-                    tagged_client=subcribed_client).select_related(
-                    'source',
-                    'tagged_client').prefetch_related(
-                    'tagged_company').get(id=pk)
+    except Story.DoesNotExist:
+        message = f'Story with id {pk} does not found '
+        return JsonResponse({"Success": "False",
+                             "Message": message}, safe=False, status=404)
 
-            return story
-        except Story.DoesNotExist:
-            return
-
-    def get(self, request, pk):
-        story = self.get_object(request, pk)
-        if not story:
-            return Response(f'Story with id {pk} does not found')
+    if request.method == 'GET':
         serialized_stories = Story_listing_Serializer(story)
-        return Response(serialized_stories.data)
+        return JsonResponse(serialized_stories.data,safe=False, status=200)
 
-    def put(self, request, pk):
-        story = self.get_object(request, pk)
-        if not story:
-            return Response(f'Story with id {pk} does not found ')
+    if request.method == 'PUT':
         serializer = Story_listing_Serializer(story,
                                               data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data,
-                            status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(serializer.data,safe=False, status=201)
+        return JsonResponse(serializer.errors,safe=False, status=400)
 
-    def delete(self, request, pk):
-        story = self.get_object(request, pk)
-        if not story:
-            return Response(f'Story with id {pk} does not found')
+    if request.method == 'DELETE':
         story.delete()
-        return Response(status=
-                        status.HTTP_204_NO_CONTENT)
-
-
-class MyObtainTokenPairView(TokenObtainPairView):
-    permissions_classes = (AllowAny,)
-    serializer_class = MyTokenObtainPairSerializer
-
-
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    #
-    # def get(self, request):
-    #     serializer = RegisterSerializer(self.queryset, many=True)
-    #     return Response(serializer.data)
-
-    def post(self, request, *args, **kwargs):
-        serializer = SubscriberSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data,
-                            status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({"Message": "Story Deleted Successfully"},safe=False, status=204)
